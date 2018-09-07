@@ -1,0 +1,96 @@
+--Group 8: Simon Cho, Stephen Prince, Yang Xu, Juntao Zhang, Daniel Zielinski
+--Group 8's Hive to query and create csv tables for visualizations in R
+
+--read the merged csv file from R into Hive
+CREATE TABLE final (dest STRING, origin STRING, uniquecarrier STRING, year INT, month INT, dayofmonth INT, dayofweek INT, deptime INT, crsdeptime INT, arrtime INT, crsarrtime INT, flightnum STRING, tailnum STRING, actualelapsedtime INT, crselapsedtime INT, airtime INT, arrdelay INT, depdelay INT, distance INT, cancelled INT, diverted INT, description STRING, origin_airport STRING, origin_city STRING, origin_state STRING, dest_airport STRING, dest_city STRING, dest_state STRING)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+TBLPROPERTIES ("skip.header.line.count"="1");
+LOAD DATA INPATH 'finaloutput.csv'
+OVERWRITE INTO TABLE final;
+
+--Some summary statistics
+SELECT MAX(arrdelay) FROM final;
+SELECT MIN(arrdelay) FROM final;
+SELECT MAX(depdelay) FROM final;
+SELECT MIN(depdelay) FROM final;
+SELECT COUNT(cancelled) FROM final WHERE cancelled = 1;
+SELECT COUNT(cancelled) FROM final WHERE cancelled = 0;
+
+
+--LOOK AT NUMBER OF FLIGHTS, DELAYS, AND CANCELLATIONS BY TIME (MONTH & DAY OF MONTH)
+--FIRST, LOOK AT NUMBER OF FLIGHTS
+--Create a table for number of flights by month
+CREATE TABLE numflightsbymonths
+AS
+SELECT month, COUNT(uniquecarrier) FROM final
+GROUP BY month;
+
+--Create a table for number of flights by day of month
+CREATE TABLE flightsbymonth
+AS
+SELECT dayofmonth, COUNT(uniquecarrier) FROM final
+GROUP BY dayofmonth;
+
+--SECOND, LOOK AT DELAYS
+--Create a table for arrival delays by month
+CREATE TABLE arrdelaybymonth
+AS
+SELECT month, COUNT(arrdelay) FROM final WHERE arrdelay > 0
+GROUP BY month;
+
+--Create a table for departure delays by month
+CREATE TABLE depdelaybymonth
+AS
+SELECT month, COUNT(depdelay) FROM final WHERE depdelay > 0
+GROUP BY month;
+
+--THIRD, LOOK AT CANCELLATIONS
+--cancellations by month
+CREATE TABLE cancelledbymonth
+AS
+SELECT month, COUNT(cancelled) FROM final WHERE cancelled = 1
+GROUP BY month;
+
+CREATE TABLE cancelledbydayofmonth
+AS
+SELECT dayofmonth, COUNT(cancelled) FROM final WHERE cancelled = 1
+GROUP BY dayofmonth;
+
+--cancellations by week of day
+CREATE TABLE cancelledbyweekday
+AS
+SELECT dayofweek, COUNT(cancelled) FROM final WHERE cancelled = 1
+GROUP BY dayofweek;
+
+
+--LOOK AT NUMBER OF FLIGHTS, DELAYS, AND CANCELLATIONS BY AIRLINE
+--FIRST, LOOK AT NUMBER OF FLIGHTS BY AIRLINE
+CREATE TABLE numflightsbyairline
+AS
+SELECT uniquecarrier, COUNT(uniquecarrier)
+FROM final
+GROUP BY uniquecarrier;
+
+
+--DELAYS BY AIRLINE
+--Create a table for arrival delays by airline
+CREATE TABLE arrdelaybyuniquecarrier
+AS
+SELECT uniquecarrier, COUNT(arrdelay) FROM final WHERE arrdelay > 0
+GROUP BY uniquecarrier;
+
+--Create a table for departure delays by airline
+CREATE TABLE depdelaybyuniquecarrier
+AS
+SELECT uniquecarrier, COUNT(depdelay) FROM final WHERE depdelay > 0
+GROUP BY uniquecarrier;
+
+--CANCELLATIONS BY AIRLINE
+--Create a table for cancellations by airline
+CREATE TABLE cancelbyairline
+AS
+SELECT uniquecarrier, COUNT(cancelled) FROM final WHERE cancelled = 1
+GROUP BY uniquecarrier
+SORT BY uniquecarrier;
+
